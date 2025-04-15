@@ -18,10 +18,9 @@ Insta defuse the bomb, when the defuser has defuse kit and , terrorist team is d
 ## 📥 Installation
 
 ### Plugin Installation
-1. Download the latest `Reveal-Last-Alive-GoldKingZ.x.x.x.zip` release
-2. Extract contents to your `csgo` directory
-3. Configure settings in `Reveal-Last-Alive-GoldKingZ/config/config.json`
-4. Restart your server
+1. Download the latest `InstaDefuse.zip` release
+2. Extract contents to your `/game/csgo/addons/counterstrikesharp/plugins/` directory
+3. Restart your server
 
 ---
 
