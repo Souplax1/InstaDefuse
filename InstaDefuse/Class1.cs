@@ -12,69 +12,117 @@ public class InstaDefuse : BasePlugin
     public override string ModuleVersion => "1.0.0";
     public override string ModuleDescription => "Defuse the bomb instantly.";
     public override string ModuleAuthor => "Yeezy";
+
+    private float _bombPlantedTime = float.NaN;
     public override void Load(bool hotReload)
     {
        RegisterEventHandler<EventBombBegindefuse>(OnBombBeginDefuse);
+       RegisterEventHandler<EventBombPlanted>(OnBombPlanted);
+    }
+
+    private static CPlantedC4? FindPlantedBomb()
+    {
+        var plantedBombList = Utilities.FindAllEntitiesByDesignerName<CPlantedC4>("planted_c4").ToList();
+
+        if (plantedBombList.Any())
+        {
+            return plantedBombList.FirstOrDefault();
+        }
+
+        Console.WriteLine($"No planted bomb entities have been found!");
+        return null;
+    }
+
+    public HookResult OnBombPlanted(EventBombPlanted @event, GameEventInfo info)
+    {
+      
+        _bombPlantedTime = Server.CurrentTime;
+       
+
+        return HookResult.Continue;
+    }
+
+
+    private static bool TeamHasAlivePlayers(CsTeam team)
+    {
+        var players = Utilities.GetPlayers();
+
+        foreach (var player in players)
+        {
+            if (!player.IsValid) continue;
+            if (player.Team != team) continue;
+            if (!player.PawnIsAlive) continue;
+
+            return true;
+        }
+
+        return false;
     }
 
 
     private HookResult OnBombBeginDefuse(EventBombBegindefuse @event, GameEventInfo info)
     {
         var player = @event.Userid;
-        if (player == null || !player.IsValid || player.PlayerPawn.Value == null)
-            return HookResult.Continue;
 
-        var bomb = Utilities.FindAllEntitiesByDesignerName<CPlantedC4>("planted_c4").FirstOrDefault();
-        if (bomb == null || !bomb.IsValid || bomb.BombDefused)
-            return HookResult.Continue;
-
-        // Check if all Terrorists are dead
-        bool allTerroristsDead = true;
-        foreach (var p in Utilities.GetPlayers())
+        if (player != null && player.IsValid && player.PawnIsAlive)
         {
-            if (p.Team == CsTeam.Terrorist && p.PawnIsAlive) 
-            {
-                allTerroristsDead = false;
-                break;
-            }
-        }
-
-        if (allTerroristsDead || @event.Haskit)
-        {
-            bomb.DefuseCountDown = 0.1f;
-            Utilities.SetStateChanged(bomb, "CPlantedC4", "m_bBombDefused");
-            Utilities.SetStateChanged(bomb, "CPlantedC4", "m_flDefuseCountDown");
-
-            Server.NextFrame(() =>
-            {
-                AddTeamScore((int)CsTeam.CounterTerrorist);
-
-                var gameRules = Utilities.FindAllEntitiesByDesignerName<CCSGameRulesProxy>("cs_gamerules")
-                    .FirstOrDefault()?.GameRules;
-
-                if (gameRules != null)
-                {
-                    gameRules.TerminateRound(0.5f, RoundEndReason.BombDefused);
-                }
-            });
-
-            return HookResult.Changed;
+            AttemptInstadefuse(player);
         }
 
         return HookResult.Continue;
     }
 
-    private void AddTeamScore(int team)
+    private void AttemptInstadefuse(CCSPlayerController defuser)
     {
-        var teamManagers = Utilities.FindAllEntitiesByDesignerName<CCSTeam>("cs_team_manager");
-        foreach (var teamManager in teamManagers)
+
+
+        var plantedBomb = FindPlantedBomb();
+        if (plantedBomb == null)
         {
-            if (teamManager.TeamNum == team)
+            Console.WriteLine($"Planted bomb is null!");
+            return;
+        }
+
+        if (plantedBomb.CannotBeDefused)
+        {
+            return;
+        }
+
+        if (TeamHasAlivePlayers(CsTeam.Terrorist))
+        {
+            Console.WriteLine($"Terrorists are still alive");
+            return;
+        }
+
+
+        var bombTimeUntilDetonation = plantedBomb.TimerLength - (Server.CurrentTime - _bombPlantedTime);
+
+        var defuseLength = plantedBomb.DefuseLength;
+        if (defuseLength != 5 && defuseLength != 10)
+        {
+            defuseLength = defuser.PawnHasDefuser ? 5.0f : 10.0f;
+        }
+
+        var timeLeftAfterDefuse = bombTimeUntilDetonation - defuseLength;
+        var bombCanBeDefusedInTime = timeLeftAfterDefuse >= 0.0f;
+
+        if (bombCanBeDefusedInTime)
+        {
+            Server.NextFrame(() =>
             {
-                teamManager.Score++;
-                Utilities.SetStateChanged(teamManager, "CTeam", "m_iScore");
-                break; // Exit after finding the correct team
-            }
+                plantedBomb = FindPlantedBomb();
+
+                if (plantedBomb == null)
+                {
+                    Console.WriteLine($"Planted bomb is null!");
+                    return;
+                }
+
+                plantedBomb.DefuseCountDown = 0;
+
+                Server.PrintToChatAll($"{ChatColors.Green}{defuser.PlayerName} Insta defused.");
+            });
         }
     }
+
 }
