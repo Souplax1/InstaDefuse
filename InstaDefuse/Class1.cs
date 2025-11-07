@@ -51,7 +51,9 @@ public class InstaDefuse : BasePlugin
         {
             if (!player.IsValid) continue;
             if (player.Team != team) continue;
-            if (!player.PawnIsAlive) continue;
+            var pawn = player.PlayerPawn?.Value;
+            if (pawn == null) continue;
+            if (pawn.Health <= 0) continue;
 
             return true;
         }
