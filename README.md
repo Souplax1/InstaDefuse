@@ -1,5 +1,5 @@
 
-# [CS2] Instant Bomb Defuse (1.0.0)
+# [CS2] Instant Bomb Defuse (2.0.0)
 
 Insta defuse the bomb, when the defuser has defuse kit and , terrorist team is dead.
 
