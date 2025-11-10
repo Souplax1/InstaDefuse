@@ -24,3 +24,8 @@ Insta defuse the bomb, when the defuser has defuse kit and , terrorist team is d
 
 ---
 
+## ⚙️ Configuration
+
+Config is auto-created at `/game/csgo/addons/counterstrikesharp/configs/plugins/InstaDefuse/config.json`.
+Options: `chat_prefix` (text), `prefix_color` (green/blue/red/yellow/white/grey), `insta_explode` (true/false).
+
